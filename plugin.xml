@@ -10,7 +10,7 @@
     <keywords></keywords>
     
     <engines>
-        <engine name="cordova" version=">=5.0.0"/>
+        <engine name="cordova" version=">=4.0.0"/>
     </engines>
     
     <dependency id="org.apache.cordova.geolocation"/>
@@ -24,20 +24,23 @@
     <!-- android -->
     <platform name="android">
         <source-file src="src/android/BackgroundLocationServicesPlugin.java" target-dir="src/com/flybuy/cordova/location"/>
-        <source-file src="src/android/BackgroundLocationUpdateService.java" target-dir="src/com/flybuy/cordova/location"/>
+        <source-file src="src/android/DetectedActivitiesIntentService.java" target-dir="src/com/flybuy/cordova/location"/>
+        <source-file src="src/android/Constants.java" target-dir="src/com/flybuy/cordova/location"/>
+        <source-file src="src/android/Utils.java" target-dir="src/com/flybuy/cordova/location"/>
         
         <source-file src="src/android/location_icon.png" target-dir="res/drawable"/>
         
         <config-file target="AndroidManifest.xml" parent="/manifest/application">
             <meta-data android:name="com.google.android.gms.version" android:value="@integer/google_play_services_version"/>
-            <service android:name="com.flybuy.cordova.location.BackgroundLocationUpdateService" android:enabled="true"
-            android:process=":remote"/>
+            <service android:name="com.flybuy.cordova.location.DetectedActivitiesIntentService" android:exported="true" />
+            <receiver android:name="com.flybuy.cordova.location.BackgroundLocationUpdateService" />
         </config-file>
         
         
         <config-file target="AndroidManifest.xml" parent="/manifest">
             <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
-            <!--<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />-->
+            <uses-permission android:name="com.google.android.gms.permission.ACTIVITY_RECOGNITION"/>
+            <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
             <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
             <uses-permission android:name="android.permission.ACCESS_LOCATION_EXTRA_COMMANDS"/>
             <uses-permission android:name="android.permission.INTERNET"/>

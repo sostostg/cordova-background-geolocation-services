@@ -66,6 +66,8 @@ import com.google.android.gms.location.FusedLocationProviderApi;
 import com.google.android.gms.common.api.GoogleApiClient.ConnectionCallbacks;
 import com.google.android.gms.common.api.GoogleApiClient.OnConnectionFailedListener;
 
+import android.content.BroadcastReceiver;
+
 import static java.lang.Math.*;
 
 import java.security.SecureRandom;
@@ -83,10 +85,12 @@ import android.graphics.BitmapFactory;
 import android.util.DisplayMetrics;
 import android.content.res.Resources;
 
+import android.content.BroadcastReceiver;
+
 
 public class BackgroundLocationUpdateService
         extends Service
-        implements GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener {
+        implements GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener, BroadcastReceiver {
 
     private static final String P_NAME = "com.flybuy.cordova.location.";
 

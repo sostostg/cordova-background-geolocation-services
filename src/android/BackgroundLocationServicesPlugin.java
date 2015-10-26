@@ -19,6 +19,19 @@ import android.location.LocationManager;
 import android.os.Bundle;
 import android.util.Log;
 
+import com.google.android.gms.location.ActivityRecognition;
+import com.google.android.gms.location.DetectedActivity;
+import com.google.android.gms.location.LocationListener;
+import com.google.android.gms.location.LocationRequest;
+import android.support.v4.content.LocalBroadcastManager;
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.api.ResultCallback;
+import com.google.android.gms.common.api.Status;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.location.LocationServices;
+import android.app.PendingIntent;
+import android.widget.Toast;
+
 public class BackgroundLocationServicesPlugin extends CordovaPlugin {
     private static final String TAG = "BackgroundLocationServicesPlugin";
     private static final String PLUGIN_VERSION = "1.0";
@@ -55,61 +68,66 @@ public class BackgroundLocationServicesPlugin extends CordovaPlugin {
     private String headers;
     
     private JSONArray fences = null;
-
-    private static final String P_NAME = "com.flybuy.cordova.location.";
-    
-    private static final String STOP_RECORDING  = P_NAME + "STOP_RECORDING";
-    private static final String START_RECORDING = P_NAME + "START_RECORDING";
-    private static final String CHANGE_AGGRESSIVE = P_NAME + "CHANGE_AGGRESSIVE";
-    private static final String STOP_GEOFENCES = P_NAME + "STOP_GEOFENCES";
-    private static final String CALLBACK_LOCATION_UPDATE = P_NAME + "CALLBACK_LOCATION_UPDATE";
     
     private CallbackContext locationUpdateCallback = null;
     
     private BroadcastReceiver receiver = null;
+    private BroadcastReceiver detectedActivityReceiver = null;
+    private GoogleApiClient mGoogleActivityClient;
     
     public boolean execute(String action, JSONArray data, CallbackContext callbackContext) {
         
         Activity activity = this.cordova.getActivity();
         
         Boolean result = false;
-        updateServiceIntent = new Intent(activity, BackgroundLocationUpdateService.class);
+        // updateServiceIntent = new Intent(activity, BackgroundLocationUpdateService.class);
         
         if (ACTION_START.equalsIgnoreCase(action) && !isEnabled) {
             result = true;
-            if (params == null || headers == null|| url == null) {
-                callbackContext.error("Call configure before calling start");
-            } else {
-                callbackContext.success();
-                updateServiceIntent.putExtra("desiredAccuracy", desiredAccuracy);
-                updateServiceIntent.putExtra("distanceFilter", distanceFilter);
-                updateServiceIntent.putExtra("desiredAccuracy", desiredAccuracy);
-                updateServiceIntent.putExtra("isDebugging", isDebugging);
-                updateServiceIntent.putExtra("notificationTitle", notificationTitle);
-                updateServiceIntent.putExtra("notificationText", notificationText);
-                updateServiceIntent.putExtra("interval", interval);
-                updateServiceIntent.putExtra("fastestInterval", fastestInterval);
-                updateServiceIntent.putExtra("aggressiveInterval", aggressiveInterval);
+            // if (params == null || headers == null|| url == null) {
+            //     callbackContext.error("Call configure before calling start");
+            // } else {
+            //     callbackContext.success();
+            //     updateServiceIntent.putExtra("desiredAccuracy", desiredAccuracy);
+            //     updateServiceIntent.putExtra("distanceFilter", distanceFilter);
+            //     updateServiceIntent.putExtra("desiredAccuracy", desiredAccuracy);
+            //     updateServiceIntent.putExtra("isDebugging", isDebugging);
+            //     updateServiceIntent.putExtra("notificationTitle", notificationTitle);
+            //     updateServiceIntent.putExtra("notificationText", notificationText);
+            //     updateServiceIntent.putExtra("interval", interval);
+            //     updateServiceIntent.putExtra("fastestInterval", fastestInterval);
+            //     updateServiceIntent.putExtra("aggressiveInterval", aggressiveInterval);
 
-                //URL / PARAMS
-                updateServiceIntent.putExtra("url", url);
-                updateServiceIntent.putExtra("params", params);
-                updateServiceIntent.putExtra("headers", headers);
+            //     //URL / PARAMS
+            //     updateServiceIntent.putExtra("url", url);
+            //     updateServiceIntent.putExtra("params", params);
+            //     updateServiceIntent.putExtra("headers", headers);
 
-                activity.startService(updateServiceIntent);
+            //     activity.startService(updateServiceIntent);
 
-                createLocationUpdateReceiver();
-                webView.getContext().registerReceiver(this.receiver, new IntentFilter(CALLBACK_LOCATION_UPDATE));
+            //     createLocationUpdateReceiver();
+            //     webView.getContext().registerReceiver(this.receiver, new IntentFilter(CALLBACK_LOCATION_UPDATE));
 
-                isEnabled = true;
+            //     isEnabled = true;
+            // }
+
+            if(mGoogleActivityClient == null) {
+                buildActivityClient();
             }
+
+            this.detectedActivityReceiver = new ActivityDetectionReceiver();
+            LocalBroadcastManager.getInstance(webView.getContext()).registerReceiver(this.detectedActivityReceiver,
+                new IntentFilter(Constants.DETECTED_ACTIVITIES_PI));
+
+            enableActivity();
+
         } else if (ACTION_STOP.equalsIgnoreCase(action)) {
             isEnabled = false;
             result = true;
-            activity.stopService(updateServiceIntent);
+            // activity.stopService(updateServiceIntent);
             callbackContext.success();
             
-            destroyLocationUpdateReceiver();
+            // destroyLocationUpdateReceiver();
         } else if (ACTION_CONFIGURE.equalsIgnoreCase(action)) {
             result = true;
             try {
@@ -129,7 +147,6 @@ public class BackgroundLocationServicesPlugin extends CordovaPlugin {
                 Log.d(TAG, "URL" + this.url);
                 this.params = data.getString(11);
                 this.headers = data.getString(12);
-
                 
             } catch (JSONException e) {
                 Log.d(TAG, "Json Exception" + e);
@@ -144,17 +161,16 @@ public class BackgroundLocationServicesPlugin extends CordovaPlugin {
             callbackContext.success(PLUGIN_VERSION);
         } else if(ACTION_REGISTER_FOR_LOCATION_UPDATES.equalsIgnoreCase(action)) {
             result = true;
-            if(debug()) {
-                Log.w(TAG, "WARNING: Anroid does not support callbacks yet. Use the HTTP configuration");
-            }
+            // if(debug()) {
+            //     Log.w(TAG, "WARNING: Anroid does not support callbacks yet. Use the HTTP configuration");
+            // }
             //Register the funcition for repeated location update
-            // locationUpdateCallback = callbackContext;
-
-            callbackContext.error("Anroid does not support callbacks yet. Use the HTTP configuration");
+            locationUpdateCallback = callbackContext;
+            // callbackContext.error("Anroid does not support callbacks yet. Use the HTTP configuration");
         } else if(ACTION_AGGRESSIVE_TRACKING.equalsIgnoreCase(action)) {
             result = true;
             if(isEnabled) {
-                this.cordova.getActivity().sendBroadcast(new Intent(CHANGE_AGGRESSIVE));
+                // this.cordova.getActivity().sendBroadcast(new Intent(CHANGE_AGGRESSIVE));
                 callbackContext.success();
             } else {
                 callbackContext.error("Tracking not enabled, need to start tracking before starting aggressive tracking");
@@ -178,8 +194,8 @@ public class BackgroundLocationServicesPlugin extends CordovaPlugin {
             Log.d(TAG, "- locationUpdateReceiver Paused (starting recording = " + String.valueOf(isEnabled) + ")");
         }
         if (isEnabled) {
-            Activity activity = this.cordova.getActivity();
-            activity.sendBroadcast(new Intent(START_RECORDING));
+            // Activity activity = this.cordova.getActivity();
+            // activity.sendBroadcast(new Intent(START_RECORDING));
         }
     }
     
@@ -189,9 +205,100 @@ public class BackgroundLocationServicesPlugin extends CordovaPlugin {
             Log.d(TAG, "- locationUpdateReceiver Resumed (stopping recording)" + String.valueOf(isEnabled));
         }
         if (isEnabled) {
-            Activity activity = this.cordova.getActivity();
-            activity.sendBroadcast(new Intent(STOP_RECORDING));
+            // Activity activity = this.cordova.getActivity();
+            // activity.sendBroadcast(new Intent(STOP_RECORDING));
         }
+    }
+
+    protected void enableActivity() {
+        Log.w(TAG, "Enabling Activity Results");
+        isEnabled = true;
+        mGoogleActivityClient.connect();
+    }
+
+
+    public class ActivityDetectionReceiver extends BroadcastReceiver {
+        @Override
+        public void onReceive(Context context, final Intent intent) {
+            String updatedActivity =
+                    intent.getStringExtra(Constants.ACTIVITY_EXTRA);
+            // int confidence = intent.getIntExtra(Constants.ACTIVITY_CONF_EXTRA, 0);
+
+            // if(updatedActivity != "unknown") {
+
+            //     mActivityText.setText(updatedActivity + " " + confidence + "%");
+            //     Log.w(TAG, updatedActivity);
+            //     if (updatedActivity.equals("Still") && isUpdatingLocation) {
+            //         stopUpdatingLocation();
+            //     } else if (!updatedActivity.equals("Still") && !isUpdatingLocation) {
+            //         startUpdatingLocation();
+            //     }
+            // }
+            Log.w(TAG, "RECEIVED DETECTED ACTIVITY " + updatedActivity);
+            Toast.makeText(context, "We recieveived a Activity Update " + updatedActivity, Toast.LENGTH_SHORT).show();
+
+             if (locationUpdateCallback != null) {
+                    cordova.getThreadPool().execute(new Runnable() {
+                        public void run() {
+                            if(intent.getExtras() == null) {
+                                locationUpdateCallback.error("ERROR: Location Was Null");
+                            }
+
+                            // JSONObject data = locationToJSON(intent.getExtras());
+                            PluginResult pluginResult = new PluginResult(PluginResult.Status.OK);
+                            pluginResult.setKeepCallback(true);
+                            locationUpdateCallback.sendPluginResult(pluginResult);
+                        }
+                    });
+                } else {
+                    Log.w(TAG, "WARNING LOCATION UPDATE CALLBACK IS NULL, PLEASE RUN REGISTER LOCATION UPDATES");
+                }
+
+        }
+    }
+
+    protected synchronized void buildActivityClient() {
+        GoogleApiClient.ConnectionCallbacks cb = new GoogleApiClient.ConnectionCallbacks() {
+            @Override
+            public void onConnected(Bundle bundle) {
+                Log.w(TAG, "Activity Client Connected");
+                ActivityRecognition.ActivityRecognitionApi.requestActivityUpdates(
+                        mGoogleActivityClient,
+                        500,
+                        getActivityPendingIntent()
+                );
+                //.setResultCallback(BackgroundLocationServicesPlugin.this);
+            }
+            @Override
+            public void onConnectionSuspended(int i) {
+//                Log.w(TAG, "Connection To Activity Suspended");
+//                Toast.makeText(getApplicationContext(), "Activity Client Suspended", Toast.LENGTH_SHORT).show();
+//                if(isEnabled) {
+//                    mGoogleActivityClient.connect();
+//                }
+            }
+        };
+
+        GoogleApiClient.OnConnectionFailedListener failedCb = new GoogleApiClient.OnConnectionFailedListener() {
+            @Override
+            public void onConnectionFailed(ConnectionResult cr) {
+                Log.w(TAG, "ERROR CONNECTING TO DETECTED ACTIVITIES");
+            }
+        };
+
+        mGoogleActivityClient = new GoogleApiClient.Builder(webView.getContext())
+                .addConnectionCallbacks(cb)
+                .addOnConnectionFailedListener(failedCb)
+                .addApiIfAvailable(ActivityRecognition.API)
+                .build();
+    }
+
+    private PendingIntent getActivityPendingIntent() {
+        Intent intent = new Intent(webView.getContext(), DetectedActivitiesIntentService.class);
+
+        // We use FLAG_UPDATE_CURRENT so that we get the same pending intent back when calling
+        // requestActivityUpdates() and removeActivityUpdates().
+        return PendingIntent.getService(webView.getContext(), 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
     }
     
     private void createLocationUpdateReceiver() {
