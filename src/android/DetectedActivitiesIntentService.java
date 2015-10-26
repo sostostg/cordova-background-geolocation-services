@@ -65,7 +65,7 @@ public class DetectedActivitiesIntentService extends IntentService {
         // Broadcast the list of detected activities.
         localIntent.putExtra(Constants.ACTIVITY_EXTRA, mostLikelyActivity);
         // localIntent.putExtra(Constants.ACTIVITY_CONF_EXTRA, highestConfidence);
-        LocalBroadcastManager.getInstance(this).sendBroadcast(localIntent);
+        sendBroadcast(localIntent);
     }
 
 }

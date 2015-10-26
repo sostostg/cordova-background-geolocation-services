@@ -69,7 +69,7 @@ public class BackgroundLocationServicesPlugin extends CordovaPlugin {
     
     private JSONArray fences = null;
     
-    private CallbackContext locationUpdateCallback = null;
+    private static CallbackContext locationUpdateCallback = null;
     
     private BroadcastReceiver receiver = null;
     private BroadcastReceiver detectedActivityReceiver = null;
@@ -116,8 +116,8 @@ public class BackgroundLocationServicesPlugin extends CordovaPlugin {
             }
 
             this.detectedActivityReceiver = new ActivityDetectionReceiver();
-            LocalBroadcastManager.getInstance(webView.getContext()).registerReceiver(this.detectedActivityReceiver,
-                new IntentFilter(Constants.DETECTED_ACTIVITIES_PI));
+            // LocalBroadcastManager.getInstance(webView.getContext()).registerReceiver(this.detectedActivityReceiver,
+            //     new IntentFilter(Constants.DETECTED_ACTIVITIES_PI));
 
             enableActivity();
 
@@ -217,7 +217,9 @@ public class BackgroundLocationServicesPlugin extends CordovaPlugin {
     }
 
 
-    public class ActivityDetectionReceiver extends BroadcastReceiver {
+    public static class ActivityDetectionReceiver extends BroadcastReceiver {
+        public ActivityDetectionReceiver() {}
+        
         @Override
         public void onReceive(Context context, final Intent intent) {
             String updatedActivity =
@@ -238,18 +240,21 @@ public class BackgroundLocationServicesPlugin extends CordovaPlugin {
             Toast.makeText(context, "We recieveived a Activity Update " + updatedActivity, Toast.LENGTH_SHORT).show();
 
              if (locationUpdateCallback != null) {
-                    cordova.getThreadPool().execute(new Runnable() {
-                        public void run() {
-                            if(intent.getExtras() == null) {
-                                locationUpdateCallback.error("ERROR: Location Was Null");
-                            }
+                    // cordova.getThreadPool().execute(new Runnable() {
+                    //     public void run() {
+                    //         if(intent.getExtras() == null) {
+                    //             locationUpdateCallback.error("ERROR: Location Was Null");
+                    //         }
 
-                            // JSONObject data = locationToJSON(intent.getExtras());
-                            PluginResult pluginResult = new PluginResult(PluginResult.Status.OK);
-                            pluginResult.setKeepCallback(true);
-                            locationUpdateCallback.sendPluginResult(pluginResult);
-                        }
-                    });
+                    //         // JSONObject data = locationToJSON(intent.getExtras());
+                    //         PluginResult pluginResult = new PluginResult(PluginResult.Status.OK);
+                    //         pluginResult.setKeepCallback(true);
+                    //         locationUpdateCallback.sendPluginResult(pluginResult);
+                    //     }
+                    // });
+                    PluginResult pluginResult = new PluginResult(PluginResult.Status.OK);
+                    pluginResult.setKeepCallback(true);
+                    locationUpdateCallback.sendPluginResult(pluginResult);
                 } else {
                     Log.w(TAG, "WARNING LOCATION UPDATE CALLBACK IS NULL, PLEASE RUN REGISTER LOCATION UPDATES");
                 }

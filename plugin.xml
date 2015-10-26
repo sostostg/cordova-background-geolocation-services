@@ -33,7 +33,11 @@
         <config-file target="AndroidManifest.xml" parent="/manifest/application">
             <meta-data android:name="com.google.android.gms.version" android:value="@integer/google_play_services_version"/>
             <service android:name="com.flybuy.cordova.location.DetectedActivitiesIntentService" android:exported="true" />
-            <receiver android:name="com.flybuy.cordova.location.BackgroundLocationUpdateService" />
+            <receiver android:name="com.flybuy.cordova.location.BackgroundLocationServicesPlugin$ActivityDetectionReceiver" android:enabled="true">
+                <intent-filter>
+                    <action android:name="com.flybuy.cordova.location.DETECTED_ACTIVITIES_PI"></action>
+                </intent-filter>
+            </receiver>
         </config-file>
         
         
